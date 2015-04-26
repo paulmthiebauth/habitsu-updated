@@ -1,0 +1,153 @@
+<script src="//code.highcharts.com/highcharts.js"></script>
+<script src="/js/dashbargraph.js"></script>
+<link href='//fonts.googleapis.com/css?family=Quicksand:300,400,700' rel='stylesheet' type='text/css'>
+<script type="text/javascript">
+<!--
+    function toggle_visibility(id) {
+       var e = document.getElementById(id);
+       $(e).fadeToggle(800);
+    }
+//-->
+</script>
+<%= csrf_meta_tags %>
+
+<div class="row">
+
+  <div class="large-4 columns">
+    <div class="stats-container">
+      <div class="quote">
+        <h3>Todays Mantra</h3>
+        <br>
+        <div class="quote_text">
+          "Help others achieve their dreams and you will achieve yours."<br>
+          -Les Brown
+      </div>
+    </div>
+      <div class="stats">
+      <div class="graph">
+        <div>
+          <h3>Daily Completion Rates</h3><br>
+        </div>
+        <div id="container2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div class="large-4 columns">
+    <div class="todo">
+      <h3>To Do List</h3>
+      <div class="task-creation">
+        <div class="tasksdate">
+          <ul class="inline-list">
+            <li><div class="navbutton"><%= link_to image_tag("/leftarrow.png"), user_path(current_user, q: @current_page += 1 ), :id => "previous-tasks" %></div></li>
+            <% @current_page -= 1 %>
+            <li><%= (@current_page).days.ago.localtime.strftime('%a %B %e, %Y') %></li>
+
+            <% if @current_page >= 1 %>
+              <li><div class="navbutton"><%= link_to image_tag("/rightarrow.png"), user_path(current_user, q: @current_page -= 1 ) %></div></li>
+              <% @current_page += 1 %>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+
+      <% if @current_page == 0 %>
+        <%= form_for [@user, @task] do |f| %>
+          <div class="task_name">
+            <%= f.text_field :name, size: 10%>
+          </div>
+          <div class="task_submit">
+            <%= f.submit "", :class => 'task_list_submit', :id => 'new_task_button' %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <div class="todo-items">
+      <div class="tasks">
+        <% @tasks = @tasks.sort_by {|x| x.completed }.reverse %>
+        <% @tasks.each do |task|%>
+          <% if task.completed_at.nil? %>
+            <div class = "incomplete-task">
+              <br><%= button_to "", user_task_path(@user, task), method: :delete, :class => 'delete_task', :id => "task-#{task.id}-delete", data: { confirm: "Delete this task?" }  %> <%= link_to image_tag("/pendingcircle.png"), complete_task_path(task.id), :id => "task-#{task.id}-complete", method: :patch %>  <%= task.name %>
+          </div>
+        <% else %>
+          <div class="complete-task">
+            <%= button_to "", user_task_path(@user, task), method: :delete, :class => 'delete_task', :id => "task-#{task.id}-delete", data: { confirm: "Delete this task?" }  %>
+            <%= link_to image_tag("/completedcircle.png"), incomplete_task_path(task.id), method: :patch, :id => "task-#{task.id}-incomplete", data: { confirm: "Mark this task as incomplete?" } %>
+            <%= task.name %> <br>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="large-4 columns">
+  <div class="habitlist2">
+  <div class="habit-header">
+    <h3>Habit Checklist</h3>
+  </div>
+  <div class="habit">
+      <div>
+
+        <% if @user.plans.empty? %>
+          <div class="noplan">
+            You haven't signed up for any programs yet! <a href="/plans">Click here to get started.</a>
+          </div>
+        <% end %>
+
+        <% @plans.each do |plan|%>
+        <div class="plan-container">
+          <div class="planname">
+            <% toggle = plan.id %>
+            <a href="#" onclick='toggle_visibility("plan-<%= plan.id %>");'><%=plan.plan_name %></a>
+          </div>
+          <% if @habits.empty? %>
+          <% else %>
+          <div class="habits">
+          <div id="plan-<%= plan.id %>" class="hidden">
+            <% @habits = @habits.sort_by {|x| x.streak_count }.reverse %>
+
+            <% @habits.each do |habit| %>
+              <% if habit.plan_id == plan.id && habit.date >= @date.beginning_of_day %>
+                <% if habit.completed_at.nil? %>
+                  <div id="habit-<%= habit.id %>-complete">
+                    <div class="habitlist">
+                      <%= button_to "", user_dailyhabit_path(@user, habit), :id => "#{habit.id}-complete", method: :patch, form: { data: {'habit-button' => 'complete'}}, :class => "buttonToComplete" %>
+                      <%= Habit.find(habit.habit_id).name %><br>
+                    </div>
+                  </div>
+                  <div id="habit-<%=habit.id %>-incomplete" class="hidden">
+                    <div class="complete-task">
+                      <%= button_to "", user_dailyhabit_path(@user, habit), :id => "#{habit.id}-incomplete", method: :patch, form: { data: {'habit-button' => 'incomplete'}}, :class => "buttonToIncomplete" %>
+                      <%= Habit.find(habit.habit_id).name %><br>
+                    </div>
+                  </div>
+                <% else %>
+                  <div id="habit-<%=habit.id %>-incomplete">
+                    <div class="complete-task">
+                      <%= button_to "", user_dailyhabit_path(@user, habit), :id => "#{habit.id}-incomplete",  method: :patch, form: { data: {'habit-button' => 'incomplete'}}, :class => "buttonToIncomplete" %>
+                      <%= Habit.find(habit.habit_id).name %><br>
+                    </div>
+                  </div>
+                  <div id="habit-<%= habit.id %>-complete" class="hidden">
+                    <div class="habitlist">
+                      <% random_name = Habit.find(habit.habit_id).name %>
+                      <%= button_to "", user_dailyhabit_path(@user, habit), :id => "#{habit.id}-complete", habit_name: random_name, method: :patch, form: { data: {'habit-button' => 'complete'}}, :class => "buttonToComplete" %>
+                      <%= Habit.find(habit.habit_id).name %><br>
+                    </div>
+                  </div>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+          </div>
+        </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
